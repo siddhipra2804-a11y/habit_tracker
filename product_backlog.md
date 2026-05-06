@@ -1,3 +1,5 @@
+<u> 1) Registration and Login </u>
+
 **1.** **Registration**
 
    **Title:** Account registration\
@@ -63,6 +65,8 @@
 **Title:** Edit personal information\
 **Description:** As a user, I want to update my name, username, age, and country on my profile page, so that I can keep my information up to date.\
 **Priority:** High
+
+12. Save updated information 
 
 
 
