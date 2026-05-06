@@ -39,6 +39,12 @@
 **Title:** Delete a habit\
 **Description:** As a user, I want to delete existing habits so that I can keep my habits up to date.\
 **Priority:** High
+
+**8. Visualize completed habits**
+
+**Title:** Visualize completed habits\
+**Description:** As a user, I want to see a chart of my completed habits for each day of the week so that I can quickly identify trends in my progress.\
+**Priority:** High
       
 **9. View Habits**
 
@@ -46,6 +52,17 @@
 **Description:** As a user, I want to see both completed and incomplete habits in my report so that I have a comprehensive view of my habit tracking performance.\
 **Priority:** High
 
+**10. Habit with color**
+
+**Title:** Personalize a habit with color\
+**Description:** As a user, I want to assign a specific color to each habit to make it personal to me.\
+**Priority:** low
+
+**11. Edit personal information**
+
+**Title:** Edit personal information\
+**Description:** As a user, I want to update my name, username, age, and country on my profile page, so that I can keep my information up to date.\
+**Priority:** High
 
 
 
