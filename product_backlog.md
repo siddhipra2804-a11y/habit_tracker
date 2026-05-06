@@ -1,6 +1,6 @@
  ## 1) Registration and Login 
  
-### 1. Registration
+## 1. Registration
 
 ### Title: Account registration
 ### Description: As a user, I want to register with my name, username, age, and country so that I can create an account and access the habit tracking features
