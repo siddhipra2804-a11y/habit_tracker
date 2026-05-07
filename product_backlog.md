@@ -62,6 +62,12 @@
 ### Description: As a user, I want to see a chart of my completed habits for each day of the week so that I can quickly identify trends in my progress.
 ### Priority: High
 
+## 8. Display weekly progress 
+
+### Title: Display weekly progress 
+### Description: As a user, I want to see my daily progress for each habit on the homepage, so that I can easily monitor my progress.
+### Priority: High
+
 # 3) Profile Page
 
 ## 1. Navigate to profile
@@ -128,12 +134,25 @@
 
 # 7) Reports Page
 
-## 1. View weekly reports 
-
 ### Title: View weekly reports 
 ### Description: As a user, I want to see a report of my weekly habit progress so that I can understand how well I am maintaining my habits.
 ### Priority: low
 
+# 8) Question
 
-  
+### Title: Question
+### Description: For clarifications or open questions regarding the user story.
+### Priority: question
+
+# 9) Documentation 
+
+### Title: Documentation 
+### Description: For writing or updating documentation.
+### Priority: High
+
+# 10) Enhancement 
+
+### Title: Enhancement 
+### Description: For adding new features or functionality.
+### Priority: Enhancement
   
