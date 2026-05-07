@@ -44,19 +44,25 @@
 ### Description: As a user, I want to see both completed and incomplete habits in my report so that I have a comprehensive view of my habit tracking performance.
 ### Priority: High
 
-## 5. Habit with color
+## 5. View completed habits
+
+### Title: View completed habits
+### Description: As a user, I want to see a section for completed habits on the homepage, so that I can track what I have already achieved.
+### Priority: High
+
+## 6. Habit with color
 
 ### Title: Personalize a habit with color
 ### Description: As a user, I want to assign a specific color to each habit to make it personal to me.
 ### Priority: low
 
-## 6. Visualize completed habits
+## 7. Visualize completed habits
 
 ### Title: Visualize completed habits
 ### Description: As a user, I want to see a chart of my completed habits for each day of the week so that I can quickly identify trends in my progress.
 ### Priority: High
       
-## 7. Add Habits for notification
+## 8. Add Habits for notification
 
 ### Title: Add habits for notifications
 ### Description: As a user, I want to select specific habits to receive notifications for, so that I only get reminders for the habits I am actively working on.
@@ -64,24 +70,31 @@
 
 # 3) Profile Page
 
-## 1. Edit personal information
+## 1. Navigate to profile
+
+### Title:  Navigate to profile
+### Description: As a user, I want to access a menu with options to configure my habits, view reports, edit my profile, and sign out, so that I can easily navigate different parts of the app
+### Priority: High
+
+## 2. Edit personal information
 
 ### Title: Edit personal information
 ### Description: As a user, I want to update my name, username, age, and country on my profile page, so that I can keep my information up to date.
 ### Priority: High
 
-## 2. Save updated information 
+## 3. Save updated information 
 
 ### Title: Save updated information
 ### Description: As a user, I want the changes I make to my profile to be saved, so that my updated details are stored and reflected throughout the app.
 ### Priority: High
 
-## 3. View personal information
+## 4. View personal information
 
 ### Title: View personal information
 ### Description: As a user, I want to view my saved name, username, age, and country on my profile page, so that I can see the details I provided during                            registration.
 
 ### Priority: High
+
 
 
 
