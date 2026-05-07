@@ -56,23 +56,32 @@
 ### Description: As a user, I want to see a chart of my completed habits for each day of the week so that I can quickly identify trends in my progress.
 ### Priority: High
       
+## 7. Add Habits for notification
 
+### Title: Add habits for notifications
+### Description: As a user, I want to select specific habits to receive notifications for, so that I only get reminders for the habits I am actively working on.
+### Priority: High
 
+# 3) Profile Page
 
-**11. Edit personal information**
+## 1. Edit personal information
 
-**Title:** Edit personal information\
-**Description:** As a user, I want to update my name, username, age, and country on my profile page, so that I can keep my information up to date.\
-**Priority:** High
+### Title: Edit personal information
+### Description: As a user, I want to update my name, username, age, and country on my profile page, so that I can keep my information up to date.
+### Priority: High
 
-**6. Add Habits for notification**
+## 2. Save updated information 
 
-**Title:** Add habits for notifications\
-**Description:** As a user, I want to select specific habits to receive notifications for, so that I only get reminders for the habits I am actively working on.\
-**Priority:** High
-12. Save updated information 
+### Title: Save updated information
+### Description: As a user, I want the changes I make to my profile to be saved, so that my updated details are stored and reflected throughout the app.
+### Priority: High
 
+## 3. View personal information
 
+### Title: View personal information
+### Description: As a user, I want to view my saved name, username, age, and country on my profile page, so that I can see the details I provided during                            registration.
+
+### Priority: High
 
 
 
