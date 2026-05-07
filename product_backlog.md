@@ -113,6 +113,26 @@
 ### Description: As a user, I want to select specific habits to receive notifications for, so that I only get reminders for the habits I am actively working on.
 ### Priority: High
 
+# 6) Menu Page
+
+## 1. Access menu options
+### Title: Access menu options
+### Description: As a user, I want to access a menu with options for configuring my habits, viewing reports, editing my profile, and signing out, so that I can easily navigate to different parts of the app.
+### Priority: High
+
+## 2. Sign out from menu 
+
+### Title: Sign out from menu
+### Description: As a user, I want to sign out of my account using an option in the menu, so that I can securely log out when I'm finished using the app.
+### Priority: High
+
+# 7) Reports Page
+
+## 1. View weekly reports 
+
+### Title: View weekly reports 
+### Description: As a user, I want to see a report of my weekly habit progress so that I can understand how well I am maintaining my habits.
+### Priority: low
 
 
   
