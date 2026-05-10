@@ -1,267 +1,249 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:habit_tracker/screens/daily_activity_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Function to save user profile data
-Future<void> saveUserProfile(Map<String, dynamic> profile) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('userProfile', jsonEncode(profile));
-}
-
-// Function to retrieve user profile data
-Future<Map<String, dynamic>?> getUserProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    final profileString = prefs.getString('userProfile');
-    return profileString != null ? jsonDecode(profileString) : null;
-}
-
-Future<void> saveUserAction(String action) async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> actions = prefs.getStringList('userActions') ?? [];
-    actions.add(action);
-    await prefs.setStringList('userActions', actions);
-}
-
-
-void main() => runApp(const HabitTrackerApp());
-
-class HabitTrackerApp extends StatelessWidget {
-  const HabitTrackerApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        primarySwatch: Colors.blue,
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => UserProvider(),
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: AuthWrapper(),
       ),
-      home: const AuthWrapper(),
-    );
+    ),
+  );
+}
+
+// 1. STATE MANAGEMENT
+class UserProvider extends ChangeNotifier {
+  // Registration Fields
+  String _name = "";
+  String _username = "";
+  int _age = 0;
+  String _country = "";
+  
+  bool _isLoggedIn = false;
+  bool _isConfigured = false;
+
+  // Habit Maps
+  Map<String, dynamic> _selectedHabitsMap = {};
+  Map<String, dynamic> _completedHabitsMap = {};
+
+  // Getters
+  String get username => _username;
+  bool get isLoggedIn => _isLoggedIn;
+  bool get isConfigured => _isConfigured;
+  Map<String, dynamic> get selectedHabitsMap => _selectedHabitsMap;
+
+  UserProvider() {
+    _loadFromLocalStorage();
+  }
+
+  // --- LOCAL STORAGE CORE LOGIC ---
+  Future<void> _loadFromLocalStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    _name = prefs.getString('name') ?? "";
+    _username = prefs.getString('username') ?? "";
+    _age = prefs.getInt('age') ?? 0;
+    _country = prefs.getString('country') ?? "";
+    _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    _isConfigured = prefs.getBool('isConfigured') ?? false;
+
+    // Load Maps
+    _selectedHabitsMap = jsonDecode(prefs.getString('selectedHabitsMap') ?? "{}");
+    _completedHabitsMap = jsonDecode(prefs.getString('completedHabitsMap') ?? "{}");
+
+    notifyListeners();
+  }
+
+  Future<void> _syncStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Save Registration Info
+    await prefs.setString('name', _name);
+    await prefs.setString('username', _username);
+    await prefs.setInt('age', _age);
+    await prefs.setString('country', _country);
+    
+    // Save App State
+    await prefs.setBool('isLoggedIn', _isLoggedIn);
+    await prefs.setBool('isConfigured', _isConfigured);
+    
+    // Save Habit Maps
+    await prefs.setString('selectedHabitsMap', jsonEncode(_selectedHabitsMap));
+    await prefs.setString('completedHabitsMap', jsonEncode(_completedHabitsMap));
+  }
+
+  // --- ACTIONS ---
+  void registerUser(String name, String user, int age, String country) {
+    _name = name;
+    _username = user;
+    _age = age;
+    _country = country;
+    _isLoggedIn = true;
+    _syncStorage(); // Pushes to Local Storage immediately
+    notifyListeners();
+  }
+
+  void addHabit(String habitName, Color color) {
+    String id = DateTime.now().millisecondsSinceEpoch.toString();
+    _selectedHabitsMap[id] = {
+      'name': habitName,
+      'color': color.value.toRadixString(16),
+    };
+    _syncStorage();
+    notifyListeners();
+  }
+
+  void completeHabit(String id) {
+    if (_selectedHabitsMap.containsKey(id)) {
+      _completedHabitsMap[id] = _selectedHabitsMap[id];
+      _selectedHabitsMap.remove(id);
+      _syncStorage();
+      notifyListeners();
+    }
+  }
+
+  void finishSetup() {
+    _isConfigured = true;
+    _syncStorage();
+    notifyListeners();
+  }
+
+  void logout() async {
+    _isLoggedIn = false;
+    _isConfigured = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clears Local Storage on logout
+    notifyListeners();
   }
 }
 
-class AuthWrapper extends StatefulWidget {
+// 2. AUTH WRAPPER (Switches Screens)
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  bool isLoggedIn = false;
-  bool isLoginView = true;
-
-  void toggleView() => setState(() => isLoginView = !isLoginView);
-  void login() => setState(() => isLoggedIn = true);
-  void logout() => setState(() => isLoggedIn = false);
-
-  @override
   Widget build(BuildContext context) {
-    if (isLoggedIn) {
-      return DailyActivityScreen(onLogout: logout);
-    }
-    return isLoginView
-        ? LoginScreen(onLogin: login, toRegister: toggleView)
-        : RegisterScreen(onRegister: login, toLogin: toggleView);
+    final user = context.watch<UserProvider>();
+    if (!user.isLoggedIn) return const RegistrationScreen();
+    if (!user.isConfigured) return const ConfigureHabitsScreen();
+    return const DailyActivityScreen();
   }
 }
 
-// --- SHARED STYLES ---
-Widget _buildInputLabel(String label) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 8.0),
-    child: Align(
-      alignment: Alignment.centerLeft,
-      child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-    ),
-  );
+// 3. REGISTRATION SCREEN
+class RegistrationScreen extends StatefulWidget {
+  const RegistrationScreen({super.key});
+  @override
+  State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-// Custom TextField with White Background for the Box
-Widget _buildCustomField({required String hint, bool obscure = false, String? initialValue}) {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white, // Background of the input box
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: TextFormField(
-      initialValue: initialValue,
-      obscureText: obscure,
-      style: const TextStyle(color: Colors.black), // Text typed inside is black for readability
-      decoration: InputDecoration(
-        hintText: hint,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-        border: InputBorder.none,
-      ),
-    ),
-  );
-}
-
-// --- LOGIN SCREEN ---
-class LoginScreen extends StatelessWidget {
-  final VoidCallback onLogin;
-  final VoidCallback toRegister;
-
-  const LoginScreen({super.key, required this.onLogin, required this.toRegister});
+class _RegistrationScreenState extends State<RegistrationScreen> {
+  final _nameController = TextEditingController();
+  final _userController = TextEditingController();
+  final _ageController = TextEditingController();
+  final _countryController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue[800], // Deep Blue Background
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            children: [
-              const Text("LOGIN", style: TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 40),
-              _buildInputLabel("Username"),
-              _buildCustomField(hint: "Enter username"),
-              const SizedBox(height: 20),
-              _buildInputLabel("Password"),
-              _buildCustomField(hint: "Enter password", obscure: true),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(onPressed: () {}, child: const Text("Forgot Password?", style: TextStyle(color: Colors.white70))),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: onLogin,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue[800], minimumSize: const Size(double.infinity, 50)),
-                child: const Text("LOGIN"),
-              ),
-              TextButton(onPressed: toRegister, child: const Text("Sign Up", style: TextStyle(color: Colors.white))),
-            ],
-          ),
+      appBar: AppBar(title: const Text("User Registration")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _nameController, decoration: const InputDecoration(labelText: "Full Name")),
+            TextField(controller: _userController, decoration: const InputDecoration(labelText: "Username")),
+            TextField(controller: _ageController, decoration: const InputDecoration(labelText: "Age"), keyboardType: TextInputType.number),
+            TextField(controller: _countryController, decoration: const InputDecoration(labelText: "Country")),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                context.read<UserProvider>().registerUser(
+                  _nameController.text, 
+                  _userController.text, 
+                  int.tryParse(_ageController.text) ?? 0, 
+                  _countryController.text
+                );
+              },
+              child: const Text("Register & Save to Local Storage"),
+            )
+          ],
         ),
       ),
     );
   }
 }
 
-// --- REGISTER SCREEN ---
-class RegisterScreen extends StatefulWidget {
-  final VoidCallback onRegister;
-  final VoidCallback toLogin;
-  const RegisterScreen({super.key, required this.onRegister, required this.toLogin});
-
+// 4. CONFIGURE HABITS SCREEN
+class ConfigureHabitsScreen extends StatefulWidget {
+  const ConfigureHabitsScreen({super.key});
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<ConfigureHabitsScreen> createState() => _ConfigureHabitsScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
-  final List<String> habits = ["Walking", "Gym", "Reading", "Coding", "Meditation"];
-  final List<String> selectedHabits = [];
-  String? selectedCountry = "USA";
+class _ConfigureHabitsScreenState extends State<ConfigureHabitsScreen> {
+  final _habitCtrl = TextEditingController();
+  Color _selectedColor = Colors.yellow;
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<UserProvider>();
     return Scaffold(
-      backgroundColor: Colors.blue[700],
-      body: Scrollbar(
-        thumbVisibility: true,
-        thickness: 8,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            children: [
-              const SizedBox(height: 60),
-              const Text("REGISTER", style: TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 30),
-              _buildInputLabel("Username"),
-              _buildCustomField(hint: "Username"),
-              const SizedBox(height: 15),
-              _buildInputLabel("Password"),
-              _buildCustomField(hint: "Password", obscure: true),
-              const SizedBox(height: 15),
-              _buildInputLabel("Age"),
-              _buildCustomField(hint: "Age", initialValue: "25"),
-              const SizedBox(height: 15),
-              _buildInputLabel("Country"),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedCountry,
-                    isExpanded: true,
-                    items: ["USA", "India", "UK", "Canada"].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: (val) => setState(() => selectedCountry = val),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 25),
-              const Text("Select Habits", style: TextStyle(color: Colors.white, fontSize: 18)),
-              Wrap(
-                spacing: 8,
-                children: habits.map((habit) {
-                  bool isSelected = selectedHabits.contains(habit);
-                  return FilterChip(
-                    label: Text(habit),
-                    selected: isSelected,
-                    selectedColor: Colors.white,
-                    checkmarkColor: Colors.blue,
-                    onSelected: (val) => setState(() => val ? selectedHabits.add(habit) : selectedHabits.remove(habit)),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: widget.onRegister,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue[700], minimumSize: const Size(double.infinity, 50)),
-                child: const Text("REGISTER"),
-              ),
-              TextButton(onPressed: widget.toLogin, child: const Text("Already Register? Log In", style: TextStyle(color: Colors.white))),
-            ],
+      appBar: AppBar(title: const Text("Step 2: Add Habits")),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(controller: _habitCtrl, decoration: const InputDecoration(labelText: "Habit Name")),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// --- DAILY ACTIVITY SCREEN ---
-class DailyActivitiesWidget extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final activities = context.watch<UserProvider>().dailyActivities;
-
-    return activities.isEmpty
-        ? Center(child: Text("No activities selected yet!"))
-        : ListView.builder(
-            itemCount: activities.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                leading: Icon(Icons.check_circle_outline),
-                title: Text(activities[index].name),
-              );
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [Colors.yellow, Colors.blue, Colors.green, Colors.red].map((c) => IconButton(
+              icon: Icon(Icons.circle, color: c, size: _selectedColor == c ? 40 : 25),
+              onPressed: () => setState(() => _selectedColor = c),
+            )).toList(),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<UserProvider>().addHabit(_habitCtrl.text, _selectedColor);
+              _habitCtrl.clear();
             },
-          );
+            child: const Text("Add Habit to Map"),
+          ),
+          Expanded(
+            child: ListView(
+              children: user.selectedHabitsMap.entries.map((e) => ListTile(
+                leading: CircleAvatar(backgroundColor: Color(int.parse("0x${e.value['color']}"))),
+                title: Text(e.value['name']),
+              )).toList(),
+            ),
+          ),
+          ElevatedButton(onPressed: () => user.finishSetup(), child: const Text("Finish Configuration")),
+        ],
+      ),
+    );
   }
 }
 
-class UserProvider extends ChangeNotifier {
-  String _username = "Guest";
-  List<Activity> _allActivities = [
-    Activity(id: '1', name: 'Morning Run'),
-    Activity(id: '2', name: 'Read 10 Pages'),
-    Activity(id: '3', name: 'Meditation'),
-    Activity(id: '4', name: 'Code Project'),
-  ];
-
-  String get username => _username;
-  
-  // Logic: Only return activities where isSelected is true
-  List<Activity> get dailyActivities => 
-      _allActivities.where((a) => a.isSelected).toList();
-
-  void registerUser(String name, List<String> selectedIds) {
-    _username = name;
-    for (var activity in _allActivities) {
-      activity.isSelected = selectedIds.contains(activity.id);
-    }
-    notifyListeners(); // This updates the UI everywhere
+// 5. DAILY ACTIVITY SCREEN
+class DailyActivityScreen extends StatelessWidget {
+  const DailyActivityScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<UserProvider>();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Dashboard: ${user.username}"),
+        actions: [IconButton(icon: const Icon(Icons.logout), onPressed: () => user.logout())],
+      ),
+      body: ListView(
+        children: user.selectedHabitsMap.entries.map((e) => ListTile(
+          title: Text(e.value['name']),
+          trailing: IconButton(icon: const Icon(Icons.check), onPressed: () => user.completeHabit(e.key)),
+        )).toList(),
+      ),
+    );
   }
 }
