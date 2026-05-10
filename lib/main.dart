@@ -13,13 +13,18 @@ class HabitTrackerApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Habit Tracker',
       routerConfig: appRouter, // Using the router we just built
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          bodyMedium: TextStyle(fontSize: 16),
+     theme: ThemeData(
+            primaryColor: AppStyles.primaryColor,
+            scaffoldBackgroundColor: AppStyles.backgroundColor,
+            elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppStyles.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
         ),
+        
         // Global button style
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(

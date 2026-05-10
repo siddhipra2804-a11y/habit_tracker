@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_styles.dart'; // Import your styles
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -6,40 +7,27 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background Image
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/login_bg.jpg'),
-                fit: BoxFit.cover,
+      backgroundColor: AppStyles.backgroundColor,
+      body: Padding(
+        padding: AppStyles.screenPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 60),
+            const Text("Welcome Back", style: AppStyles.headerStyle),
+            const Text("Log in to track your habits", style: AppStyles.bodyStyle),
+            const SizedBox(height: AppStyles.elementSpacing),
+            
+            // Reusable decorated container
+            Container(
+              padding: const EdgeInsets.all(AppStyles.defaultPadding),
+              decoration: AppStyles.cardDecoration,
+              child: const TextField(
+                decoration: InputDecoration(hintText: "Email"),
               ),
             ),
-          ),
-          // Content
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  'assets/icons/logo.png',
-                  height: 120,
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  "Habit Tracker",
-                  style: TextStyle(
-                    fontSize: 28, 
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white
-                  ),
-                ),
-                // Add your TextFields and Buttons here...
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
