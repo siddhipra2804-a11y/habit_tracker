@@ -25,6 +25,11 @@ class LoginScreen extends StatelessWidget {
               child: const TextField(
                 decoration: InputDecoration(hintText: "Email"),
               ),
+
+              ElevatedButton(
+                onPressed: () => context.push('/signup'),
+                child: const Text("Don't have an account? Sign Up"),
+            )
             ),
           ],
         ),

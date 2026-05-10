@@ -229,4 +229,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+
+  TextButton(
+  onPressed: () => context.go('/login'),
+  child: const Text("Already have an account? Login"),
+)
 }
