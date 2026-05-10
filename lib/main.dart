@@ -1,4 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:habit_tracker/screens/daily_activity_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Function to save user profile data
+Future<void> saveUserProfile(Map<String, dynamic> profile) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userProfile', jsonEncode(profile));
+}
+
+// Function to retrieve user profile data
+Future<Map<String, dynamic>?> getUserProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final profileString = prefs.getString('userProfile');
+    return profileString != null ? jsonDecode(profileString) : null;
+}
+
+Future<void> saveUserAction(String action) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> actions = prefs.getStringList('userActions') ?? [];
+    actions.add(action);
+    await prefs.setStringList('userActions', actions);
+}
+
 
 void main() => runApp(const HabitTrackerApp());
 
@@ -9,256 +33,235 @@ class HabitTrackerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
-      home: const HomeScreen(),
+      theme: ThemeData(
+        brightness: Brightness.light,
+        primarySwatch: Colors.blue,
+      ),
+      home: const AuthWrapper(),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool isLoggedIn = false;
+  bool isLoginView = true;
+
+  void toggleView() => setState(() => isLoginView = !isLoginView);
+  void login() => setState(() => isLoggedIn = true);
+  void logout() => setState(() => isLoggedIn = false);
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoggedIn) {
+      return DailyActivityScreen(onLogout: logout);
+    }
+    return isLoginView
+        ? LoginScreen(onLogin: login, toRegister: toggleView)
+        : RegisterScreen(onRegister: login, toLogin: toggleView);
+  }
+}
+
+// --- SHARED STYLES ---
+Widget _buildInputLabel(String label) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8.0),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+    ),
+  );
+}
+
+// Custom TextField with White Background for the Box
+Widget _buildCustomField({required String hint, bool obscure = false, String? initialValue}) {
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white, // Background of the input box
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: TextFormField(
+      initialValue: initialValue,
+      obscureText: obscure,
+      style: const TextStyle(color: Colors.black), // Text typed inside is black for readability
+      decoration: InputDecoration(
+        hintText: hint,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+        border: InputBorder.none,
+      ),
+    ),
+  );
+}
+
+// --- LOGIN SCREEN ---
+class LoginScreen extends StatelessWidget {
+  final VoidCallback onLogin;
+  final VoidCallback toRegister;
+
+  const LoginScreen({super.key, required this.onLogin, required this.toRegister});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- 1. TOP NAVIGATION BAR ---
-      appBar: AppBar(
-        title: const Text("To Do"),
-        centerTitle: true,
-        // REMOVED: "leading: Icon(Icons.menu)" 
-        // WHY: Adding a 'drawer' below tells Flutter to add the icon AND the logic for you.
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {},
-          ),
-        ],
-      ),
-
-      // --- 2. THE DRAWER (This makes the hamburger work) ---
-   // --- 2. THE DRAWER ---
-      drawer: Drawer(
-        child: Column( // Using Column allows us to use Spacer()
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.teal),
-              child: Center(
-                child: Text(
-                  "Menu", 
-                  style: TextStyle(color: Colors.white, fontSize: 24)
-                ),
+      backgroundColor: Colors.blue[800], // Deep Blue Background
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            children: [
+              const Text("LOGIN", style: TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 40),
+              _buildInputLabel("Username"),
+              _buildCustomField(hint: "Enter username"),
+              const SizedBox(height: 20),
+              _buildInputLabel("Password"),
+              _buildCustomField(hint: "Enter password", obscure: true),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(onPressed: () {}, child: const Text("Forgot Password?", style: TextStyle(color: Colors.white70))),
               ),
-            ),
-            
-            // Item 1: Home
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text("Home"),
-              onTap: () => Navigator.pop(context),
-            ),
-
-            // Item 2: Configure Habits (Added this)
-            ListTile(
-              leading: const Icon(Icons.settings_suggest),
-              title: const Text("Configure Habits"),
-              onTap: () {
-                Navigator.pop(context); // Closes the drawer
-                // Logic to open configuration screen goes here
-              },
-            ),
-
-            const Spacer(), // Pushes the next items to the bottom
-
-            const Divider(), // A subtle line above Sign Out
-
-            // Item 3: Sign Out (Added this)
-           ListTile(
-  leading: const Icon(Icons.settings_suggest),
-  title: const Text("Configure Habits"),
-  onTap: () {
-    Navigator.pop(context); // Close the drawer first
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ConfigureHabitsScreen()),
-    );
-  },
-),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: onLogin,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue[800], minimumSize: const Size(double.infinity, 50)),
+                child: const Text("LOGIN"),
+              ),
+              TextButton(onPressed: toRegister, child: const Text("Sign Up", style: TextStyle(color: Colors.white))),
+            ],
+          ),
         ),
       ),
-
-      body: const Center(child: Text("Hello, Ric! Content goes here.")),
-      
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
 
-class ConfigureHabitsScreen extends StatefulWidget {
-  const ConfigureHabitsScreen({super.key});
+// --- REGISTER SCREEN ---
+class RegisterScreen extends StatefulWidget {
+  final VoidCallback onRegister;
+  final VoidCallback toLogin;
+  const RegisterScreen({super.key, required this.onRegister, required this.toLogin});
 
   @override
-  State<ConfigureHabitsScreen> createState() => _ConfigureHabitsScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _ConfigureHabitsScreenState extends State<ConfigureHabitsScreen> {
-  // Initial list with your specific requirements
-  final List<Map<String, dynamic>> _habits = [
-    {'name': 'Workout', 'color': Colors.red},
-    {'name': 'Meditate', 'color': Colors.pink},
-    {'name': 'Read a book', 'color': Colors.green},
-    {'name': 'Drink water', 'color': Colors.blue},
-    {'name': 'Practice gratitude', 'color': Colors.yellow},
-    {'name': 'Wake up early', 'color': Colors.purple},
-  ];
-
-  final TextEditingController _nameController = TextEditingController();
-  
-  // Available colors for the dropdown
-  final Map<String, Color> _colorOptions = {
-    'Red': Colors.red,
-    'Pink': Colors.pink,
-    'Green': Colors.green,
-    'Blue': Colors.blue,
-    'Yellow': Colors.yellow,
-    'Purple': Colors.purple,
-    'Teal': Colors.teal,
-    'Orange': Colors.orange,
-  };
-
-  String _selectedColorName = 'Teal';
-
-  void _addHabit() {
-    if (_nameController.text.isNotEmpty) {
-      setState(() {
-        _habits.add({
-          'name': _nameController.text,
-          'color': _colorOptions[_selectedColorName],
-        });
-        _nameController.clear();
-      });
-    }
-  }
-
-  void _deleteHabit(int index) {
-    setState(() {
-      _habits.removeAt(index);
-    });
-  }
+class _RegisterScreenState extends State<RegisterScreen> {
+  final List<String> habits = ["Walking", "Gym", "Reading", "Coding", "Meditation"];
+  final List<String> selectedHabits = [];
+  String? selectedCountry = "USA";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Configure Habits"),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          // --- INPUT SECTION ---
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Habit Name Input
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: "Habit Name",
-                    border: OutlineInputBorder(),
+      backgroundColor: Colors.blue[700],
+      body: Scrollbar(
+        thumbVisibility: true,
+        thickness: 8,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            children: [
+              const SizedBox(height: 60),
+              const Text("REGISTER", style: TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 30),
+              _buildInputLabel("Username"),
+              _buildCustomField(hint: "Username"),
+              const SizedBox(height: 15),
+              _buildInputLabel("Password"),
+              _buildCustomField(hint: "Password", obscure: true),
+              const SizedBox(height: 15),
+              _buildInputLabel("Age"),
+              _buildCustomField(hint: "Age", initialValue: "25"),
+              const SizedBox(height: 15),
+              _buildInputLabel("Country"),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedCountry,
+                    isExpanded: true,
+                    items: ["USA", "India", "UK", "Canada"].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (val) => setState(() => selectedCountry = val),
                   ),
                 ),
-                const SizedBox(height: 15),
-
-                // 2. Select a Color Label
-                const Text(
-                  "Select a Color",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 8),
-
-                // 3. Color Dropdown
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedColorName,
-                      isExpanded: true,
-                      items: _colorOptions.keys.map((String name) {
-                        return DropdownMenuItem<String>(
-                          value: name,
-                          child: Row(
-                            children: [
-                              CircleAvatar(backgroundColor: _colorOptions[name], radius: 10),
-                              const SizedBox(width: 10),
-                              Text(name),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedColorName = newValue!;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // 4. Add Habit Button
-                ElevatedButton(
-                  onPressed: _addHabit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
-                  child: const Text("ADD HABIT", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 25),
+              const Text("Select Habits", style: TextStyle(color: Colors.white, fontSize: 18)),
+              Wrap(
+                spacing: 8,
+                children: habits.map((habit) {
+                  bool isSelected = selectedHabits.contains(habit);
+                  return FilterChip(
+                    label: Text(habit),
+                    selected: isSelected,
+                    selectedColor: Colors.white,
+                    checkmarkColor: Colors.blue,
+                    onSelected: (val) => setState(() => val ? selectedHabits.add(habit) : selectedHabits.remove(habit)),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: widget.onRegister,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue[700], minimumSize: const Size(double.infinity, 50)),
+                child: const Text("REGISTER"),
+              ),
+              TextButton(onPressed: widget.toLogin, child: const Text("Already Register? Log In", style: TextStyle(color: Colors.white))),
+            ],
           ),
-
-          const Divider(thickness: 2),
-
-          // --- HABITS LIST SECTION ---
-          Expanded(
-            child: ListView.builder(
-              itemCount: _habits.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: _habits[index]['color'],
-                      radius: 12,
-                    ),
-                    title: Text(
-                      _habits[index]['name'],
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteHabit(index),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
+  }
+}
+
+// --- DAILY ACTIVITY SCREEN ---
+class DailyActivitiesWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final activities = context.watch<UserProvider>().dailyActivities;
+
+    return activities.isEmpty
+        ? Center(child: Text("No activities selected yet!"))
+        : ListView.builder(
+            itemCount: activities.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                leading: Icon(Icons.check_circle_outline),
+                title: Text(activities[index].name),
+              );
+            },
+          );
+  }
+}
+
+class UserProvider extends ChangeNotifier {
+  String _username = "Guest";
+  List<Activity> _allActivities = [
+    Activity(id: '1', name: 'Morning Run'),
+    Activity(id: '2', name: 'Read 10 Pages'),
+    Activity(id: '3', name: 'Meditation'),
+    Activity(id: '4', name: 'Code Project'),
+  ];
+
+  String get username => _username;
+  
+  // Logic: Only return activities where isSelected is true
+  List<Activity> get dailyActivities => 
+      _allActivities.where((a) => a.isSelected).toList();
+
+  void registerUser(String name, List<String> selectedIds) {
+    _username = name;
+    for (var activity in _allActivities) {
+      activity.isSelected = selectedIds.contains(activity.id);
+    }
+    notifyListeners(); // This updates the UI everywhere
   }
 }
