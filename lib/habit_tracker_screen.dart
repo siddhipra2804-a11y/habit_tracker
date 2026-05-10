@@ -1,9 +1,9 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'add_habit_screen.dart';
+import 'login_screen.dart';
 
 class HabitTrackerScreen extends StatefulWidget {
   final String username;
@@ -65,18 +65,72 @@ class _HabitTrackerScreenState extends State<HabitTrackerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.blue.shade700,
-        title: Text(
-          name.isNotEmpty ? name : 'Loading...',
-          style: const TextStyle(
-            fontSize: 24,
+  appBar: AppBar(
+    title: const Text('Habit Tracker'),
+    // This Builder ensures the button works correctly
+    leading: Builder(
+      builder: (context) => IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: () => Scaffold.of(context).openDrawer(),
+      ),
+    ),
+  ),
+ drawer: Drawer(
+  child: ListView(
+    padding: EdgeInsets.zero,
+    children: [
+      DrawerHeader(
+        decoration: BoxDecoration(
+          color: Colors.blue.shade700,
+        ),
+        child: const Text(
+          'Menu',
+          style: TextStyle(
             color: Colors.white,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
         ),
-        automaticallyImplyLeading: true,
       ),
+      ListTile(
+        leading: const Icon(Icons.settings),
+        title: const Text('Configure'),
+        onTap: () => Navigator.pop(context),
+      ),
+      ListTile(
+        leading: const Icon(Icons.person),
+        title: const Text('Personal Info'),
+        onTap: () => Navigator.pop(context),
+      ),
+      ListTile(
+        leading: const Icon(Icons.analytics),
+        title: const Text('Reports'),
+        onTap: () => Navigator.pop(context),
+      ),
+      ListTile(
+        leading: const Icon(Icons.notifications),
+        title: const Text('Notifications'),
+        onTap: () => Navigator.pop(context),
+      ),
+      const Divider(), 
+      ListTile(
+        leading: const Icon(Icons.logout, color: Colors.red),
+        title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+        onTap: () {
+          Navigator.pop(context); // Close drawer
+          // We use pushNamed or a direct route without 'const'
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
+        },
+      ),
+    ],
+  ),
+),
+ 
+
+
       body: Column(
         children: [
           const Padding(
@@ -104,8 +158,7 @@ class _HabitTrackerScreenState extends State<HabitTrackerScreen> {
                     itemCount: selectedHabitsMap.length,
                     itemBuilder: (context, index) {
                       String habit = selectedHabitsMap.keys.elementAt(index);
-                      Color habitColor =
-                          _getHabitColor(habit, selectedHabitsMap);
+                      Color habitColor = _getHabitColor(habit, selectedHabitsMap);
                       return Dismissible(
                         key: Key(habit),
                         direction: DismissDirection.endToStart,
@@ -162,8 +215,7 @@ class _HabitTrackerScreenState extends State<HabitTrackerScreen> {
                     itemCount: completedHabitsMap.length,
                     itemBuilder: (context, index) {
                       String habit = completedHabitsMap.keys.elementAt(index);
-                      Color habitColor =
-                          _getHabitColor(habit, completedHabitsMap);
+                      Color habitColor = _getHabitColor(habit, completedHabitsMap);
                       return Dismissible(
                         key: Key(habit),
                         direction: DismissDirection.startToEnd,
@@ -189,8 +241,7 @@ class _HabitTrackerScreenState extends State<HabitTrackerScreen> {
                             ],
                           ),
                         ),
-                        child: _buildHabitCard(habit, habitColor,
-                            isCompleted: true),
+                        child: _buildHabitCard(habit, habitColor, isCompleted: true),
                       );
                     },
                   ),
@@ -217,8 +268,7 @@ class _HabitTrackerScreenState extends State<HabitTrackerScreen> {
     );
   }
 
-  Widget _buildHabitCard(String title, Color color,
-      {bool isCompleted = false}) {
+  Widget _buildHabitCard(String title, Color color, {bool isCompleted = false}) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       color: color,
@@ -233,9 +283,7 @@ class _HabitTrackerScreenState extends State<HabitTrackerScreen> {
               fontSize: 16,
             ),
           ),
-          trailing: isCompleted
-              ? Icon(Icons.check_circle, color: Colors.green, size: 28)
-              : null,
+          trailing: isCompleted ? Icon(Icons.check_circle, color: Colors.green, size: 28) : null,
         ),
       ),
     );
