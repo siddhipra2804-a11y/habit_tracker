@@ -1,289 +1,216 @@
 import 'dart:convert';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'add_habit_screen.dart';
-import 'login_screen.dart';
-
-class HabitTrackerScreen extends StatefulWidget {
-  final String username;
-
-  const HabitTrackerScreen({super.key, required this.username});
-
-  @override
-  _HabitTrackerScreenState createState() => _HabitTrackerScreenState();
+void main() {
+  runApp(const MyApp());
 }
 
-class _HabitTrackerScreenState extends State<HabitTrackerScreen> {
-  Map<String, String> selectedHabitsMap = {};
-  Map<String, String> completedHabitsMap = {};
-  String name = '';
+/// FIX: MyApp is now at the top level, not nested inside another class.
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Habit Tracker',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+      home: const NotificationsScreen(),
+    );
+  }
+}
+
+class NotificationsScreen extends StatefulWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  _NotificationsScreenState createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  bool notificationsEnabled = false;
+  List<String> selectedHabits = [];
+  List<String> selectedTimes = [];
+  Map<String, String> allHabitsMap = {};
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadData();
   }
 
-  Future<void> _loadUserData() async {
+  Future<void> _loadData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    
+    // Load existing habits or set "Drink Water" and "Read a Book" as defaults
+    String? storedHabits = prefs.getString('selectedHabitsMap');
+    Map<String, String> loadedMap;
+    
+    if (storedHabits != null && storedHabits.isNotEmpty) {
+      loadedMap = Map<String, String>.from(jsonDecode(storedHabits));
+    } else {
+      // Default habits if none are found in storage
+      loadedMap = {
+        'Drink Water': '#00BFFF', // Deep Sky Blue
+        'Read a Book': '#8B4513', // Saddle Brown
+      };
+    }
+
     setState(() {
-      name = prefs.getString('name') ?? widget.username;
-      selectedHabitsMap = Map<String, String>.from(
-          jsonDecode(prefs.getString('selectedHabitsMap') ?? '{}'));
-      completedHabitsMap = Map<String, String>.from(
-          jsonDecode(prefs.getString('completedHabitsMap') ?? '{}'));
+      notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
+      allHabitsMap = loadedMap;
+      selectedHabits = prefs.getStringList('notificationHabits') ?? [];
+      selectedTimes = prefs.getStringList('notificationTimes') ?? [];
     });
   }
 
-  Future<void> _saveHabits() async {
+  Future<void> _saveNotificationSettings() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('selectedHabitsMap', jsonEncode(selectedHabitsMap));
-    await prefs.setString('completedHabitsMap', jsonEncode(completedHabitsMap));
+    await prefs.setBool('notificationsEnabled', notificationsEnabled);
+    await prefs.setStringList('notificationHabits', selectedHabits);
+    await prefs.setStringList('notificationTimes', selectedTimes);
+    // Also save the map in case it was initialized with defaults
+    await prefs.setString('selectedHabitsMap', jsonEncode(allHabitsMap));
   }
 
   Color _getColorFromHex(String hexColor) {
     hexColor = hexColor.replaceAll('#', '');
     if (hexColor.length == 6) {
-      hexColor = 'FF$hexColor'; // Add opacity if not included.
+      hexColor = 'FF$hexColor';
     }
-    return Color(int.parse('0x$hexColor'));
+    try {
+      return Color(int.parse('0x$hexColor'));
+    } catch (e) {
+      return Colors.blue;
+    }
   }
 
-  Color _getHabitColor(String habit, Map<String, String> habitsMap) {
-    String? colorHex = habitsMap[habit];
-    if (colorHex != null) {
-      try {
-        return _getColorFromHex(colorHex);
-      } catch (e) {
-        print('Error parsing color for $habit: $e');
-      }
+  void _sendTestNotification() {
+    if (html.Notification.permission != "granted") {
+      html.Notification.requestPermission().then((permission) {
+        if (permission == 'granted') {
+          html.Notification("Habit Reminder",
+              body: "It's time to work on your habits!");
+        }
+      });
+    } else {
+      html.Notification("Habit Reminder",
+          body: "It's time to work on your habits!");
     }
-    return Colors.blue; // Default color in case of error.
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-  appBar: AppBar(
-    title: const Text('Habit Tracker'),
-    // This Builder ensures the button works correctly
-    leading: Builder(
-      builder: (context) => IconButton(
-        icon: const Icon(Icons.menu),
-        onPressed: () => Scaffold.of(context).openDrawer(),
-      ),
-    ),
-  ),
- drawer: Drawer(
-  child: ListView(
-    padding: EdgeInsets.zero,
-    children: [
-      DrawerHeader(
-        decoration: BoxDecoration(
-          color: Colors.blue.shade700,
-        ),
-        child: const Text(
-          'Menu',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      ListTile(
-        leading: const Icon(Icons.settings),
-        title: const Text('Configure'),
-        onTap: () => Navigator.pop(context),
-      ),
-      ListTile(
-        leading: const Icon(Icons.person),
-        title: const Text('Personal Info'),
-        onTap: () => Navigator.pop(context),
-      ),
-      ListTile(
-        leading: const Icon(Icons.analytics),
-        title: const Text('Reports'),
-        onTap: () => Navigator.pop(context),
-      ),
-      ListTile(
-        leading: const Icon(Icons.notifications),
+      appBar: AppBar(
+        backgroundColor: Colors.blue.shade700,
+        foregroundColor: Colors.white,
         title: const Text('Notifications'),
-        onTap: () => Navigator.pop(context),
       ),
-      const Divider(), 
-      ListTile(
-        leading: const Icon(Icons.logout, color: Colors.red),
-        title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-        onTap: () {
-          Navigator.pop(context); // Close drawer
-          // We use pushNamed or a direct route without 'const'
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
-        },
-      ),
-    ],
-  ),
-),
- 
-
-
-      body: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(
-              'To Do 📝',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          selectedHabitsMap.isEmpty
-              ? const Expanded(
-                  child: Center(
-                    child: Text(
-                      'Use the + button to create some habits!',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                  ),
-                )
-              : Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: selectedHabitsMap.length,
-                    itemBuilder: (context, index) {
-                      String habit = selectedHabitsMap.keys.elementAt(index);
-                      Color habitColor = _getHabitColor(habit, selectedHabitsMap);
-                      return Dismissible(
-                        key: Key(habit),
-                        direction: DismissDirection.endToStart,
-                        onDismissed: (direction) {
-                          setState(() {
-                            String color = selectedHabitsMap.remove(habit)!;
-                            completedHabitsMap[habit] = color;
-                            _saveHabits();
-                          });
-                        },
-                        background: Container(
-                          color: Colors.green,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Swipe to Complete',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              SizedBox(width: 10),
-                              Icon(Icons.check, color: Colors.white),
-                            ],
-                          ),
-                        ),
-                        child: _buildHabitCard(habit, habitColor),
-                      );
-                    },
-                  ),
-                ),
-          Divider(),
-          const Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              'Done ✅🎉',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          completedHabitsMap.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    'Swipe right on an activity to mark as done.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                )
-              : Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: completedHabitsMap.length,
-                    itemBuilder: (context, index) {
-                      String habit = completedHabitsMap.keys.elementAt(index);
-                      Color habitColor = _getHabitColor(habit, completedHabitsMap);
-                      return Dismissible(
-                        key: Key(habit),
-                        direction: DismissDirection.startToEnd,
-                        onDismissed: (direction) {
-                          setState(() {
-                            String color = completedHabitsMap.remove(habit)!;
-                            selectedHabitsMap[habit] = color;
-                            _saveHabits();
-                          });
-                        },
-                        background: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.undo, color: Colors.white),
-                              SizedBox(width: 10),
-                              Text(
-                                'Swipe to Undo',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                        child: _buildHabitCard(habit, habitColor, isCompleted: true),
-                      );
-                    },
-                  ),
-                ),
-        ],
-      ),
-      floatingActionButton: selectedHabitsMap.isEmpty
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AddHabitScreen(),
-                  ),
-                ).then((_) {
-                  _loadUserData(); // Reload data after returning
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              title: const Text('Enable Notifications'),
+              subtitle: const Text('Get alerts for your daily habits'),
+              value: notificationsEnabled,
+              onChanged: (value) {
+                setState(() {
+                  notificationsEnabled = value;
                 });
+                _saveNotificationSettings();
               },
-              child: Icon(Icons.add),
-              backgroundColor: Colors.blue.shade700,
-              tooltip: 'Add Habits',
-            )
-          : null,
-    );
-  }
-
-  Widget _buildHabitCard(String title, Color color, {bool isCompleted = false}) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: color,
-      child: Container(
-        height: 60, // Adjust the height for thicker cards.
-        child: ListTile(
-          title: Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
             ),
-          ),
-          trailing: isCompleted ? Icon(Icons.check_circle, color: Colors.green, size: 28) : null,
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'Select Habits for Notification',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: allHabitsMap.entries.map((entry) {
+                final habit = entry.key;
+                final color = _getColorFromHex(entry.value);
+                final isSelected = selectedHabits.contains(habit);
+                
+                return FilterChip(
+                  label: Text(habit),
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.white : color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  selected: isSelected,
+                  selectedColor: color,
+                  checkmarkColor: Colors.white,
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: color, width: 2.0),
+                  onSelected: (bool selected) {
+                    setState(() {
+                      if (selected) {
+                        selectedHabits.add(habit);
+                      } else {
+                        selectedHabits.remove(habit);
+                      }
+                    });
+                    _saveNotificationSettings();
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 25),
+            const Text(
+              'Select Times for Notification',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8.0,
+              children: ['Morning', 'Afternoon', 'Evening'].map((time) {
+                return ChoiceChip(
+                  label: Text(time),
+                  selected: selectedTimes.contains(time),
+                  onSelected: (bool selected) {
+                    setState(() {
+                      if (selected) {
+                        selectedTimes.add(time);
+                      } else {
+                        selectedTimes.remove(time);
+                      }
+                    });
+                    _saveNotificationSettings();
+                  },
+                );
+              }).toList(),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _sendTestNotification,
+                icon: const Icon(Icons.notifications_active),
+                label: const Text('Send Test Notification'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

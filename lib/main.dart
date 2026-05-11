@@ -1,169 +1,221 @@
+import 'dart:convert';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(useMaterial3: true),
-    home: HabitTrackerScreen(),
-  ));
+  runApp(const MyApp());
 }
 
-// --- 1. MAIN DASHBOARD ---
-class HabitTrackerScreen extends StatelessWidget {
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Habit Tracker',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+      home: const NotificationsScreen(),
+    );
+  }
+}
+
+class NotificationsScreen extends StatefulWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  _NotificationsScreenState createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  bool notificationsEnabled = false;
+  List<String> selectedHabits = [];
+  List<String> selectedTimes = [];
+  Map<String, String> allHabitsMap = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // 1. Define the habits you want to see by default
+    Map<String, String> defaultHabits = {
+      'Drink Water': '#00BFFF',
+      'Read a Book': '#8B4513',
+    };
+
+    // 2. Load existing habits from storage
+    String? storedHabits = prefs.getString('selectedHabitsMap');
+    Map<String, String> loadedMap = {};
+
+    if (storedHabits != null && storedHabits.isNotEmpty) {
+      try {
+        loadedMap = Map<String, String>.from(jsonDecode(storedHabits));
+      } catch (e) {
+        debugPrint("Error decoding habits: $e");
+      }
+    }
+
+    // 3. MERGE: Combine defaults with loaded data so they ALWAYS show up
+    final finalMap = {...defaultHabits, ...loadedMap};
+
+    setState(() {
+      notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
+      allHabitsMap = finalMap;
+      selectedHabits = prefs.getStringList('notificationHabits') ?? [];
+      selectedTimes = prefs.getStringList('notificationTimes') ?? [];
+    });
+  }
+
+  Future<void> _saveNotificationSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notificationsEnabled', notificationsEnabled);
+    await prefs.setStringList('notificationHabits', selectedHabits);
+    await prefs.setStringList('notificationTimes', selectedTimes);
+    // Save the map so new habits added later are also persisted
+    await prefs.setString('selectedHabitsMap', jsonEncode(allHabitsMap));
+  }
+
+  Color _getColorFromHex(String hexColor) {
+    hexColor = hexColor.replaceAll('#', '');
+    if (hexColor.length == 6) {
+      hexColor = 'FF$hexColor';
+    }
+    try {
+      return Color(int.parse('0x$hexColor'));
+    } catch (e) {
+      return Colors.blue;
+    }
+  }
+
+  void _sendTestNotification() {
+    if (html.Notification.permission != "granted") {
+      html.Notification.requestPermission().then((permission) {
+        if (permission == 'granted') {
+          html.Notification("Habit Reminder",
+              body: "It's time to work on your habits!");
+        }
+      });
+    } else {
+      html.Notification("Habit Reminder",
+          body: "It's time to work on your habits!");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Habit Tracker", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue.shade700,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
+        foregroundColor: Colors.white,
+        title: const Text('Notifications'),
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue.shade700),
-              child: const Text("Menu", style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text("Configure Habits"),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => ConfigureHabitsScreen()));
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text("Personal Info"),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => PersonalInfoScreen()));
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.analytics),
-              title: const Text("Weekly Reports"),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => WeeklyReportScreen()));
+            SwitchListTile(
+              title: const Text('Enable Notifications'),
+              subtitle: const Text('Get alerts for your daily habits'),
+              value: notificationsEnabled,
+              onChanged: (value) {
+                setState(() {
+                  notificationsEnabled = value;
+                });
+                _saveNotificationSettings();
               },
             ),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text("Sign Out", style: TextStyle(color: Colors.red)),
-              onTap: () => Navigator.pop(context),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'Select Habits for Notification',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
             ),
-          ],
-        ),
-      ),
-      body: const Center(child: Text("Select an option from the menu")),
-    );
-  }
-}
+            // THE HABIT CHIPS SECTION
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: allHabitsMap.entries.map((entry) {
+                final habit = entry.key;
+                final color = _getColorFromHex(entry.value);
+                final isSelected = selectedHabits.contains(habit);
 
-// --- 2. PERSONAL INFO SCREEN ---
-class PersonalInfoScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Personal Info")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const TextField(decoration: InputDecoration(labelText: "Name")),
-            const TextField(decoration: InputDecoration(labelText: "Username")),
-            const TextField(decoration: InputDecoration(labelText: "Age")),
-            const TextField(decoration: InputDecoration(labelText: "Country")),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {}, 
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
-              child: const Text("Save Changes"),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// --- 3. WEEKLY REPORT SCREEN ---
-class WeeklyReportScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Weekly Reports")),
-      body: SingleChildScrollView(
-        child: DataTable(
-          columns: const [
-            DataColumn(label: Text('Habit')),
-            DataColumn(label: Text('Mon')),
-            DataColumn(label: Text('Tue')),
-            DataColumn(label: Text('Wed')),
-          ],
-          rows: const [
-            DataRow(cells: [
-              DataCell(Text('Wake up early')),
-              DataCell(Icon(Icons.check_circle, color: Colors.green)),
-              DataCell(Icon(Icons.check_circle, color: Colors.green)),
-              DataCell(Icon(Icons.radio_button_unchecked)),
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// --- 4. CONFIGURE HABITS SCREEN ---
-class ConfigureHabitsScreen extends StatefulWidget {
-  @override
-  _ConfigureHabitsScreenState createState() => _ConfigureHabitsScreenState();
-}
-
-class _ConfigureHabitsScreenState extends State<ConfigureHabitsScreen> {
-  String selectedColor = 'Green';
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Configure Habits")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const TextField(decoration: InputDecoration(labelText: "Habit Name")),
-            DropdownButton<String>(
-              value: selectedColor,
-              isExpanded: true,
-              items: <String>['Green', 'Orange', 'Blue', 'Red'].map((String value) {
-                return DropdownMenuItem<String>(value: value, child: Text(value));
+                return FilterChip(
+                  label: Text(habit),
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.white : color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  selected: isSelected,
+                  selectedColor: color,
+                  checkmarkColor: Colors.white,
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: color, width: 2.0),
+                  onSelected: (bool selected) {
+                    setState(() {
+                      if (selected) {
+                        selectedHabits.add(habit);
+                      } else {
+                        selectedHabits.remove(habit);
+                      }
+                    });
+                    _saveNotificationSettings();
+                  },
+                );
               }).toList(),
-              onChanged: (val) => setState(() => selectedColor = val!),
+            ),
+            const SizedBox(height: 25),
+            const Text(
+              'Select Times for Notification',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 10),
-            ElevatedButton(onPressed: () {}, child: const Text("Add Habit")),
-            const Divider(height: 40),
-            // Habit List Item 1
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Colors.green, radius: 10),
-              title: const Text("Wake up early"),
-              trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () {}),
+            Wrap(
+              spacing: 8.0,
+              children: ['Morning', 'Afternoon', 'Evening'].map((time) {
+                return ChoiceChip(
+                  label: Text(time),
+                  selected: selectedTimes.contains(time),
+                  onSelected: (bool selected) {
+                    setState(() {
+                      if (selected) {
+                        selectedTimes.add(time);
+                      } else {
+                        selectedTimes.remove(time);
+                      }
+                    });
+                    _saveNotificationSettings();
+                  },
+                );
+              }).toList(),
             ),
-            // Habit List Item 2
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Colors.orange, radius: 10),
-              title: const Text("Meditate"),
-              trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () {}),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _sendTestNotification,
+                icon: const Icon(Icons.notifications_active),
+                label: const Text('Send Test Notification'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
